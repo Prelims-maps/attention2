@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta charset='utf-8' />
+    <title>SAI Sample Survey Map</title>
+    <meta name='viewport' content='width=device-width, initial-scale=1' />
+    <!-- Include Mapbox GL JS library -->
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js'></script>
+    <!-- Include Mapbox GL JS CSS -->
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css' rel='stylesheet' />
+    
+    <!-- Adding charging station icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+
+    <style>
+
+        /* CSS styles for the body, map, manual, log-box, buttons, and markers */
+        body {
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+        }
+
+        #route1 {
+            position: absolute;
+            left: 30px;
+            top: calc(13% + 150px);
+            width: 20%;
+            bottom: 5%;
+            padding: 10px;
+            background-color: #ffe7b4;
+            font-family: sans-serif;
+            font-size: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #000000;
+        }
+
+        #route2 {
+            position: absolute;
+            right: 30px;
+            top: calc(13% + 150px);
+            width: 20%;
+            bottom: 5%;
+            padding: 10px;
+            background-color: #f1f1f1;
+            font-family: sans-serif;
+            font-size: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #000000;
+        }
+
+        #airecommendation {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: 10px; /* Adjust this value to control how far from the top you want it */
+            width: 21%;
+            height: 50px; /* Set your desired height */
+            padding: 0px 10px 28px 10px;
+            background-color: #4c7c8a;
+            color: #FFFFFF; /* Change this to your desired text color */
+            font-family: sans-serif;
+            font-size: 16px;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border: 2px solid #FFFFFF;
+        }
+        
+
+    </style>
+</head>
+
+<body>
+
+    <!-- Map container -->
+    <div id='map'></div>
+    
+    <!-- Information about route 1 -->
+    <div id="route1">
+        <h3>Route 1</h3>
+        <b>Charging station name:</b> <br /> This is an example name for Route 1.<br /><br />
+        <b>Charging station address:</b> <br /> This is an example address for Route 1.<br /><br />
+        <b>Travel time to destination:</b> <br /> 0 minutes.
+    </div>
+
+    <!-- Information about route 2 -->
+    <div id="route2">
+        <h3>Route 2</h3>
+        <b>Charging station name:</b> <br /> This is an example name for Route 2.<br /><br />
+        <b>Charging station address:</b> <br /> This is an example address for Route 2.<br /><br />
+        <b>Travel time to destination:</b> <br /> 0 minutes.
+    </div>
+
+    Information about recommendation
+    <div id="airecommendation">
+        <center><h3>Recommendation: <br /> Route 1</h3></center>
+    </div>
+
+    <script>
+        // Set the Mapbox access token
+        mapboxgl.accessToken = 'pk.eyJ1IjoiaGdhem1laCIsImEiOiJjbGx5NzZpc3QwYWZtM2xwcjE3a2J5bjQxIn0.cpUto7a5fO9EgSY2LCjOSQ';
+        
+        // Initialize the map
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/navigation-day-v1',
+            center: [-75.20583405880158, 40.01202217982606],
+            zoom: 9
+        });
+
+        const bounds = [
+            [-76.40204163057186, 39.60178272426062],
+            [-74.20204163057186, 40.50178272426062]
+        ];
+        map.setMaxBounds(bounds);
+
+        // Variables to store start and end points
+        let startPoint = null;
+        let endPoint = null;
+
+        // Array to store charging station data
+        // SET COORDINATES OF CHARGING STATION INFO BELOW
+        const chargingStations = [
+            {
+                coordinates: [-75.372140, 40.101290]
+            },
+            {
+                coordinates: [-75.145357, 39.954078]
+            }
+        ];
+
+        let flag = 1;
+
+        // Function to add charging stations to the map with labels matching the icon color
+        function addChargingStations() {
+            chargingStations.forEach((station, index) => {
+                const el = document.createElement('div');
+                el.className = 'marker';
+                el.id = `station${index + 1}`; // Unique ID for each charging station
+                el.style.display = 'flex';
+                el.style.flexDirection = 'column';
+                el.style.alignItems = 'center';
+                el.style.cursor = 'pointer'; // Indicates it's interactive
+
+                // Define the color for the icon and label
+                const iconColor = index === 0 ? '#9A6B03' : '#000000'; // Brown for Route 1, Black for Route 2
+
+                // Create an icon element
+                const icon = document.createElement('i');
+                icon.className = 'fa-solid fa-charging-station';
+                icon.style.fontSize = '40px'; // Adjust icon size
+                icon.style.color = iconColor; // Set icon color
+                el.appendChild(icon);
+
+                // Create a label element
+                const label = document.createElement('div');
+                label.innerText = `Route ${index + 1}`; // Set label text to "Route 1" and "Route 2"
+                label.style.fontSize = '14px';
+                label.style.color = '#ffffff';
+                label.style.backgroundColor = iconColor;
+                label.style.padding = '4px 8px';
+                label.style.borderRadius = '4px';
+                label.style.marginTop = '4px'; // Space between icon and label
+                label.style.textAlign = 'center';
+                el.appendChild(label);
+
+                // Add event listeners for hover effect
+                el.addEventListener('mouseenter', () => {
+                    document.getElementById(`station${index + 1}`).style.opacity = '1';
+                    const otherStation = index === 0 ? 'station2' : 'station1';
+                    document.getElementById(otherStation).style.opacity = '0.3';
+
+                    // Also make the other route transparent
+                    const otherRoute = index === 0 ? 'route2' : 'route1';
+                    if (map.getLayer(`${otherRoute}-start`)) {
+                        map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 0.3);
+                        map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 0.3);
+                    }
+                });
+
+                el.addEventListener('mouseleave', () => {
+                    document.getElementById('station1').style.opacity = '1';
+                    document.getElementById('station2').style.opacity = '1';
+
+                    if (map.getLayer('route1-start')) {
+                        map.setPaintProperty('route1-start', 'line-opacity', 1);
+                        map.setPaintProperty('route1-end', 'line-opacity', 1);
+                    }
+                    if (map.getLayer('route2-start')) {
+                        map.setPaintProperty('route2-start', 'line-opacity', 1);
+                        map.setPaintProperty('route2-end', 'line-opacity', 1);
+                    }
+                });
+
+                // Add marker to the map
+                new mapboxgl.Marker({ element: el })
+                    .setLngLat(station.coordinates)
+                    .addTo(map);
+            });
+        }
+
+        // Function to get the route to travel between any route type
+        async function getRoute(routeType) {
+            console.log(`Get route for type ${routeType}`);
+
+            let startPoint = {
+                lng: pointSource.data.features[0].geometry.coordinates[0],
+                lat: pointSource.data.features[0].geometry.coordinates[1]
+            };
+            let endPoint = {
+                lng: endpointsource.data.features[0].geometry.coordinates[0],
+                lat: endpointsource.data.features[0].geometry.coordinates[1]
+            };
+
+            let midPoint;
+            let baseRouteId, color;
+
+            if (routeType === 1) {
+                midPoint = {
+                    lng: chargingStations[0].coordinates[0],
+                    lat: chargingStations[0].coordinates[1]
+                };
+                baseRouteId = "route1";
+                color = "#CC9316"; // Brown
+            } else {
+                midPoint = {
+                    lng: chargingStations[1].coordinates[0],
+                    lat: chargingStations[1].coordinates[1]
+                };
+                baseRouteId = "route2";
+                color = "#555555"; // Grey
+            }
+
+            // Draw both segments with unique IDs
+            await fetchAndDisplayRoute(startPoint, midPoint, color, `${baseRouteId}-start`);
+            await fetchAndDisplayRoute(midPoint, endPoint, color, `${baseRouteId}-end`);
+        }
+
+        // Function to fetch and display a route between two points
+        async function fetchAndDisplayRoute(start, end, color, routeId) {
+            console.log(`Fetching route from ${start.lng},${start.lat} to ${end.lng},${end.lat}`);
+
+            // Fetch route from Mapbox Directions API
+            const query = await fetch(
+                `https://api.mapbox.com/directions/v5/mapbox/driving/${start.lng},${start.lat};${end.lng},${end.lat}?steps=true&geometries=geojson&access_token=${mapboxgl.accessToken}`,
+                { method: 'GET' }
+            );
+            const json = await query.json();
+            const data = json.routes[0];
+            const route = data.geometry.coordinates;
+            const geojson = {
+                type: 'Feature',
+                properties: {},
+                geometry: {
+                    type: 'LineString',
+                    coordinates: route
+                }
+            };
+
+            // Check if route already exists, else create it
+            if (map.getSource(routeId)) {
+                map.getSource(routeId).setData(geojson);
+            } else {
+                map.addLayer({
+                    id: routeId,
+                    type: 'line',
+                    source: {
+                        type: 'geojson',
+                        data: geojson
+                    },
+                    layout: {
+                        'line-join': 'round',
+                        'line-cap': 'round'
+                    },
+                    paint: {
+                        'line-color': color,
+                        'line-width': 10,
+                        'line-opacity': 1
+                    }
+                });
+
+                // Get base route name (either "route1" or "route2")
+                const baseRoute = routeId.includes("route1") ? "route1" : "route2";
+                const otherRoute = baseRoute === "route1" ? "route2" : "route1";
+                const otherStation = baseRoute === "route1" ? "station2" : "station1";
+
+                // Add mouse events to control transparency
+                map.on('mouseenter', routeId, () => {
+                    map.setPaintProperty(`${baseRoute}-start`, 'line-opacity', 1);
+                    map.setPaintProperty(`${baseRoute}-end`, 'line-opacity', 1);
+                    
+                    // Make the other route transparent
+                    if (map.getLayer(`${otherRoute}-start`)) {
+                        map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 0.3);
+                        map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 0.3);
+                    }
+
+                    // Make the other charging station transparent
+                    if (document.getElementById(otherStation)) {
+                        document.getElementById(otherStation).style.opacity = '0.3';
+                    }
+                });
+
+                map.on('mouseleave', routeId, () => {
+                    map.setPaintProperty(`${baseRoute}-start`, 'line-opacity', 1);
+                    map.setPaintProperty(`${baseRoute}-end`, 'line-opacity', 1);
+
+                    if (map.getLayer(`${otherRoute}-start`)) {
+                        map.setPaintProperty(`${otherRoute}-start`, 'line-opacity', 1);
+                        map.setPaintProperty(`${otherRoute}-end`, 'line-opacity', 1);
+                    }
+
+                    if (document.getElementById('station1')) {
+                        document.getElementById('station1').style.opacity = '1';
+                    }
+                    if (document.getElementById('station2')) {
+                        document.getElementById('station2').style.opacity = '1';
+                    }
+                });
+            }
+        }
+
+        // Define sources for start and end points
+        // SET START AND END POINTS BELOW
+        const pointSource = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {
+                            title: 'Start'
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [-75.53236206307785,40.227161771297375]
+                        }
+                    }
+                ]
+            }
+        };
+
+        const endpointsource = {
+            type: 'geojson',
+            data: {
+                type: 'FeatureCollection',
+                features: [
+                    {
+                        type: 'Feature',
+                        properties: {
+                            title: 'End'
+                        },
+                        geometry: {
+                            type: 'Point',
+                            coordinates: [-75.01644140544582,39.926937544379854]
+                        }
+                    }
+                ]
+            }
+        };
+
+        // Add route time/distance to instructions & update charging station details
+        map.on('load', async () => {
+            addChargingStations();  // You might need to re-add stations to reflect updated data
+            getRoute(1);
+            getRoute(2);
+
+            // Add layers for start and end points
+            map.addLayer({
+                id: 'point',
+                type: 'circle',
+                source: pointSource,
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#1972b0'
+                }
+            });
+            map.addLayer({
+                id: 'point-label',
+                type: 'symbol',
+                source: pointSource,
+                layout: {
+                    'text-field': '{title}',
+                    'text-size': 24,
+                    'text-anchor': 'left',
+                    'text-offset': [0.8, 0]
+                },
+                paint: {
+                    'text-color': 'black'
+                }
+            });
+
+            map.addLayer({
+                id: 'endpoint',
+                type: 'circle',
+                source: endpointsource,
+                paint: {
+                    'circle-radius': 15,
+                    'circle-color': '#e32b44'
+                }
+            });
+            map.addLayer({
+                id: 'endpoint-label',
+                type: 'symbol',
+                source: endpointsource,
+                layout: {
+                    'text-field': '{title}',
+                    'text-size': 24,
+                    'text-anchor': 'left',
+                    'text-offset': [0.8, 0]
+                },
+                paint: {
+                    'text-color': 'black'
+                }
+            });
+        });
+
+    </script>
+</body>
+
+</html>
